@@ -1,4 +1,5 @@
 import pygame
+from ai_player import AI
 
 # Kích thước ô cờ
 CELL_SIZE = 40  
@@ -13,11 +14,14 @@ BLUE = (0, 0, 200)
 # Khởi tạo Pygame
 pygame.init()
 screen = pygame.display.set_mode((BOARD_SIZE * CELL_SIZE, BOARD_SIZE * CELL_SIZE))
-pygame.display.set_caption("Cờ Caro 15x15")
+pygame.display.set_caption("Cờ Caro 15x15 - Người vs AI")
+
+# Khởi tạo AI
+ai = AI(BOARD_SIZE)
 
 # Bàn cờ lưu trạng thái (0: trống, 1: X, 2: O)
 board = [[0] * BOARD_SIZE for _ in range(BOARD_SIZE)] 
-turn = 1  # Luân phiên 1 (X) và 2 (O) bằng cách turn = 3 - turn 
+turn = 1  # Người chơi luôn đi trước với X (1), AI sẽ là O (2)
 
 # Vẽ bàn cờ
 def draw_board():
@@ -66,28 +70,48 @@ def show_message(text):
 
 # Kiểm tra sự kiện chuột
 running = True
-game_over = False  # Biến kiểm soát khi kết thúc game
-draw_board()  # Vẽ lưới bàn cờ một lần duy nhất
-pygame.display.flip()  # Cập nhật toàn bộ màn hình
+game_over = False
+draw_board()
+pygame.display.flip()
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+        elif event.type == pygame.MOUSEBUTTONDOWN and not game_over and turn == 1:  # Chỉ cho phép người chơi đánh khi đến lượt
             mx, my = pygame.mouse.get_pos()
             row, col = my // CELL_SIZE, mx // CELL_SIZE
             if board[row][col] == 0:
+                print(f"Người chơi đánh tại vị trí: ({row}, {col})")
                 board[row][col] = turn
                 draw_piece(row, col)
                 if check_winner(row, col):
-                    show_message(f"Nguoi choi {'X' if turn == 1 else 'O'} thang!")
-                    game_over = True  # Không cho phép chơi tiếp
+                    show_message("Ban da thang!")
+                    game_over = True
                 elif all(board[i][j] != 0 for i in range(BOARD_SIZE) for j in range(BOARD_SIZE)):
                     show_message("Hoa!")
-                    game_over = True  # Không cho phép chơi tiếp
+                    game_over = True
                 else:
-                    turn = 3 - turn  # Đổi lượt chơi
+                    turn = 2  # Chuyển lượt cho AI
+                    print("Đến lượt AI...")
+                    
+                    # AI đánh
+                    ai_row, ai_col = ai.get_best_move(board)
+                    print(f"AI đánh tại vị trí: ({ai_row}, {ai_col})")
+                    if ai_row is not None and ai_col is not None:
+                        board[ai_row][ai_col] = 2
+                        draw_piece(ai_row, ai_col)
+                        if check_winner(ai_row, ai_col):
+                            show_message("AI thang!")
+                            game_over = True
+                        elif all(board[i][j] != 0 for i in range(BOARD_SIZE) for j in range(BOARD_SIZE)):
+                            show_message("Hoa!")
+                            game_over = True
+                        else:
+                            turn = 1  # Chuyển lượt lại cho người chơi
+                    else:
+                        print("Lỗi: AI không thể tìm được nước đi!")
+                        turn = 1
         
         # Nếu game over, chờ người chơi nhấn nút để thoát
         elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
